@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaVolumeUp, FaGlobe, FaSun, FaMoon, FaSearch, FaTimes } from "react-icons/fa";
 
+
 const categories = ["Top", "Technology", "Business", "Sports", "Entertainment", "Health", "Science"];
 const countries = [
   { code: "in", name: "India" },
@@ -22,13 +23,13 @@ const languages = [
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const NEWSDATA_API_KEY = import.meta.env.VITE_NEWSDATA_API_KEY;
 const VOICERSS_KEY = import.meta.env.VITE_VOICERSS_API_KEY;
-
+const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
 export default function App() {
   const [news, setNews] = useState([]);
   const [country, setCountry] = useState("in");
   const [language, setLanguage] = useState("en");
   const [category, setCategory] = useState("top");
-  const [uiTheme, setUiTheme] = useState("dark");
+  const [uiTheme, setUiTheme] = useState("light");
   const [search, setSearch] = useState("");
   const [nextPage, setNextPage] = useState(null);
   const [hasMore, setHasMore] = useState(true);
@@ -88,34 +89,22 @@ export default function App() {
       );
       const result = res.data.choices[0].message.content;
       return texts.map((_, i) => result.split(/\n\d+\.\s/)[i + 1]?.trim() || texts[i]);
-    } catch {
+    } catch(openapiError){
+      console.error("❌ DOpenAI summarising failed:", openapiError.message);
       return texts.map(t => t.split(". ").slice(0, 2).join(". "));
     }
   };
 
   const translateText = async (text, targetLang) => {
-    const encodedParams = new URLSearchParams();
-    encodedParams.set("q", text);
-    encodedParams.set("target", targetLang);
-    encodedParams.set("source", "en");
-
-    const options = {
-      method: "POST",
-      url: "https://google-translate1.p.rapidapi.com/language/translate/v2",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-RapidAPI-Key": import.meta.env.VITE_RAPIDAPI_KEY,
-        "X-RapidAPI-Host": "google-translate1.p.rapidapi.com",
-      },
-      data: encodedParams,
-    };
-
     try {
-      const response = await axios.request(options);
-      return response.data.data.translations[0].translatedText;
-    } catch (error) {
-      console.error("Translation error:", error);
-      return text;
+        const response = await axios.get(
+    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`
+  );
+  return response.data.responseData.translatedText;
+    
+      } catch (deepseekErr) {
+        console.error("❌ DeepSeek translation failed:", deepseekErr.message);
+        return text;
     }
   };
 
@@ -197,7 +186,7 @@ export default function App() {
                   <option key={lang.code} value={lang.code}>{lang.name}</option>
                 ))}
               </select>
-              <a href={article.link} target="_blank" className="text-blue-600 text-sm">Read More</a>
+              <a href={article.link} target="_blank" className="text-blue-600 text-sm">See full article</a>
             </div>
           </div>
         ))}
